@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import ru.netology.patient.entity.BloodPressure;
+import ru.netology.patient.entity.HealthInfo;
 import ru.netology.patient.entity.PatientInfo;
 import ru.netology.patient.repository.PatientInfoFileRepository;
 import ru.netology.patient.repository.PatientInfoRepository;
@@ -20,55 +21,50 @@ import ru.netology.patient.service.medical.MedicalServiceImpl;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 public class MedicalServiceTests {
-    static List<PatientInfo> patients;
+    static PatientInfo patient;
     static PatientInfoRepository patientInfoRepository;
+    static String id;
 
     @BeforeAll
     public static void initialValues(){
-        patients = new ArrayList<>();
-
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModules(new JavaTimeModule(), new ParameterNamesModule());
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
         File repoFile = new File("patients.txt");
+        if (repoFile.exists())
+            repoFile.delete();
         patientInfoRepository = new PatientInfoFileRepository(repoFile, mapper);
 
-        try(Scanner scanner = new Scanner(repoFile)){
-            while (scanner.hasNextLine()){
-                PatientInfo patientInfo = mapper.readValue(scanner.nextLine(), PatientInfo.class);
-                patients.add(patientInfo);
-            }
-        }catch (IOException e){
-            e.printStackTrace();
-        }
+        patient = new PatientInfo("Иван", "Петров", LocalDate.of(1980, 11, 26),
+                new HealthInfo(new BigDecimal("36.65"), new BloodPressure(120, 80)));
 
+        id = patientInfoRepository.add(patient);
     }
 
     @Test
     public void bloodPressureTest(){
-        int n = 0;
         SendAlertService alertServiceMock = Mockito.mock(SendAlertServiceImpl.class);
 
         MedicalService medicalService = new MedicalServiceImpl(patientInfoRepository, alertServiceMock);
 
-        String id1 = patients.get(n).getId();
         BloodPressure bloodPressure = new BloodPressure(
-                patients.get(n).getHealthInfo().getBloodPressure().getHigh() + 1,
-                     patients.get(n).getHealthInfo().getBloodPressure().getLow() - 1
+                patient.getHealthInfo().getBloodPressure().getHigh() + 1,
+                     patient.getHealthInfo().getBloodPressure().getLow() - 1
         );
 
         ArgumentCaptor<String>argumentCaptor = ArgumentCaptor.forClass(String.class);
-        medicalService.checkBloodPressure(id1, bloodPressure);
+        medicalService.checkBloodPressure(id, bloodPressure);
 
         Mockito.verify(alertServiceMock).send(argumentCaptor.capture());
 
-        String expected = String.format("Warning, patient with id: %s, need help", id1);
+        String expected = String.format("Warning, patient with id: %s, need help", id);
         String actual = argumentCaptor.getValue();
 
         Assertions.assertEquals(expected, actual);
@@ -80,16 +76,15 @@ public class MedicalServiceTests {
 
         MedicalService medicalService = new MedicalServiceImpl(patientInfoRepository, alertServiceMock);
 
-        String id1 = patients.get(0).getId();
-        BigDecimal currentTemperature = patients.get(0).getHealthInfo().getNormalTemperature()
+        BigDecimal currentTemperature = patient.getHealthInfo().getNormalTemperature()
                 .subtract(BigDecimal.valueOf(2));
 
-        medicalService.checkTemperature(id1, currentTemperature);
+        medicalService.checkTemperature(id, currentTemperature);
 
         ArgumentCaptor<String>argumentCaptor = ArgumentCaptor.forClass(String.class);
         Mockito.verify(alertServiceMock).send(argumentCaptor.capture());
 
-        String expected = String.format("Warning, patient with id: %s, need help", id1);
+        String expected = String.format("Warning, patient with id: %s, need help", id);
         String actual = argumentCaptor.getValue();
 
         Assertions.assertEquals(expected, actual);
@@ -97,15 +92,13 @@ public class MedicalServiceTests {
 
     @Test
     public void bloodPressureTestNormal(){
-        int n = 0;
         SendAlertService alertServiceMock = Mockito.mock(SendAlertServiceImpl.class);
 
         MedicalService medicalService = new MedicalServiceImpl(patientInfoRepository, alertServiceMock);
 
-        String id1 = patients.get(n).getId();
-        BloodPressure bloodPressure = patients.get(n).getHealthInfo().getBloodPressure();
+        BloodPressure bloodPressure = patient.getHealthInfo().getBloodPressure();
 
-        medicalService.checkBloodPressure(id1, bloodPressure);
+        medicalService.checkBloodPressure(id, bloodPressure);
 
         Mockito.verify(alertServiceMock, Mockito.never()).send(Mockito.anyString());
     }
@@ -116,10 +109,9 @@ public class MedicalServiceTests {
 
         MedicalService medicalService = new MedicalServiceImpl(patientInfoRepository, alertServiceMock);
 
-        String id1 = patients.get(0).getId();
-        BigDecimal currentTemperature = patients.get(0).getHealthInfo().getNormalTemperature();
+        BigDecimal currentTemperature = patient.getHealthInfo().getNormalTemperature();
 
-        medicalService.checkTemperature(id1, currentTemperature);
+        medicalService.checkTemperature(id, currentTemperature);
 
         Mockito.verify(alertServiceMock, Mockito.never()).send(Mockito.anyString());
     }
