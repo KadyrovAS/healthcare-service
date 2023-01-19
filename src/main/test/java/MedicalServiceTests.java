@@ -2,7 +2,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
-import net.bytebuddy.asm.Advice;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -19,12 +18,8 @@ import ru.netology.patient.service.medical.MedicalService;
 import ru.netology.patient.service.medical.MedicalServiceImpl;
 
 import java.io.File;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
 
 public class MedicalServiceTests {
     static PatientInfo patient;
@@ -115,5 +110,4 @@ public class MedicalServiceTests {
 
         Mockito.verify(alertServiceMock, Mockito.never()).send(Mockito.anyString());
     }
-
 }
